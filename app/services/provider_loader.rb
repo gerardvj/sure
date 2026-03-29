@@ -63,8 +63,8 @@ class ProviderLoader
 
       def load_from_yaml
         begin
-          auth_config = Rails.application.config_for(:auth)
-          providers = auth_config.dig("providers") || []
+          auth_config = Rails.application.config_for(:auth) || {}
+          providers = auth_config.dig("providers") || auth_config.dig(:providers) || []
 
           Rails.logger.info("[ProviderLoader] Loaded #{providers.count} provider(s) from YAML")
           providers
