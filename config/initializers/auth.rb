@@ -9,7 +9,7 @@ rescue RuntimeError, Errno::ENOENT, Psych::SyntaxError => e
   raw_auth_config = {}
 end
 
-auth_config = raw_auth_config.deep_symbolize_keys
+auth_config = (raw_auth_config || {}).deep_symbolize_keys
 
 Rails.configuration.x.auth.local_login_enabled = auth_config.dig(:local_login, :enabled)
 Rails.configuration.x.auth.local_admin_override_enabled = auth_config.dig(:local_login, :admin_override_enabled)
