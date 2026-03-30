@@ -33,7 +33,17 @@ class EnableBankingItem::Importer
     accounts_updated = 0
     accounts_failed = 0
 
-    if session_data[:accounts].present?
+    # Fetch rich account objects via GET /accounts to avoid string UID mismatches
+    accounts_payload = []
+    begin
+      accounts_result = enable_banking_provider.get_accounts
+      accounts_payload = accounts_result[:accounts] || []
+    rescue => e
+      Rails.logger.warn "EnableBankingItem::Importer - Failed to fetch GET /accounts: #{e.message}. Falling back to session accounts."
+      accounts_payload = session_data[:accounts] || []
+    end
+
+    if accounts_payload.present?
       existing_uids = enable_banking_item.enable_banking_accounts
                                          .joins(:account_provider)
                                          .pluck(:uid)
@@ -41,7 +51,7 @@ class EnableBankingItem::Importer
 
       # Enable Banking API returns accounts as an array of UIDs (strings) in the session response
       # We need to handle both array of strings and array of hashes
-      session_data[:accounts].each do |account_data|
+      accounts_payload.each do |account_data|
         # Handle both string UIDs and hash objects
         # Use identification_hash as the stable identifier across sessions
         uid = if account_data.is_a?(String)
