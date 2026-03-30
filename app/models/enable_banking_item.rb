@@ -85,8 +85,18 @@ class EnableBankingItem < ApplicationRecord
       status: :good
     )
 
-    # Import the accounts from the session
-    import_accounts_from_session(result[:accounts] || [])
+    # Attempt to fetch full account details via GET /accounts
+    begin
+      accounts_result = provider.get_accounts
+      if accounts_result[:accounts].present?
+        import_accounts_from_session(accounts_result[:accounts])
+      else
+        import_accounts_from_session(result[:accounts] || [])
+      end
+    rescue => e
+      Rails.logger.warn "Failed to fetch accounts via GET /accounts: #{e.message}. Falling back to session data."
+      import_accounts_from_session(result[:accounts] || [])
+    end
 
     result
   end
@@ -267,11 +277,19 @@ class EnableBankingItem < ApplicationRecord
 
       accounts_data.each do |account_data|
         # Use identification_hash as the stable identifier across sessions
-        uid = account_data[:identification_hash] || account_data[:uid]
+        uid = if account_data.is_a?(String)
+          account_data
+        else
+          (account_data[:identification_hash] || account_data[:uid] || account_data["identification_hash"] || account_data["uid"])&.to_s
+        end
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+        
+        if account_data.is_a?(Hash)
+          enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+        end
+        
         enable_banking_account.save!
       end
     end

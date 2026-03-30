@@ -54,14 +54,14 @@ class EnableBankingItem::Importer
 
         next unless uid.present?
 
-        # Only update if this account was previously linked
-        next unless existing_uids.include?(uid)
-
+        # Create or update the unlinked account record so the user can link it in the UI
         begin
-          # For string UIDs, we don't have account data to update - skip the import_account call
-          # The account data will be fetched via balances/transactions endpoints
           if account_data.is_a?(Hash)
             import_account(account_data)
+            accounts_updated += 1
+          else
+            # For string UIDs, ensure the record exists to be linked, but we have no snapshot data yet
+            enable_banking_item.enable_banking_accounts.find_or_create_by!(uid: uid)
             accounts_updated += 1
           end
         rescue => e

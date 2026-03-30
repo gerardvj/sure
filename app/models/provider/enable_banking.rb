@@ -109,6 +109,19 @@ class Provider::EnableBanking
     raise EnableBankingError.new("Exception during DELETE request: #{e.message}", :request_failed)
   end
 
+  # Get all accounts for the current session
+  # @return [Hash] List of accounts
+  def get_accounts
+    response = self.class.get(
+      "#{BASE_URL}/accounts",
+      headers: auth_headers
+    )
+
+    handle_response(response)
+  rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+    raise EnableBankingError.new("Exception during GET request: #{e.message}", :request_failed)
+  end
+
   # Get account details
   # @param account_id [String] The account ID (UID from Enable Banking)
   # @return [Hash] Account details
